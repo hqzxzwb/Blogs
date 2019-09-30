@@ -1,3 +1,5 @@
+# 【译】一步一步为Android实现Gradle插件
+
 **此文翻译自[Create a Standalone Gradle plugin for Android - a step-by-step guide](https://afterecho.uk/blog/create-a-standalone-gradle-plugin-for-android-a-step-by-step-guide.html)，作者AfterEcho。**
 
 下文中的“我”均指代原作者。
@@ -16,13 +18,13 @@
 
 接下来正式开始。
 
-# 0 假设
+## 0 假设
 
 我会假定你已经设置好Android开发环境，包括安装Java、Android Studio和合适的编译工具。我认为这是个合理的假设，如果你是个Android开发新手，你不太可能一上来就想要编写gradle插件。
 
 从你的角度而言，你得假定我并不精通gradle。我实在并不了解多少gradle相关知识。我所写的是我探索得出的结论，是对我来说有效的方法。如果你乐意的话，你也可以假设我是个帅到炸裂并且健谈的人。不过对于本文的目标而言，这些都不是必须的。
 
-# 1 基本配置
+## 1 基本配置
 
 这是一个我完全没法找到任何详细信息的步骤。而这只是基本的配置而已。
 
@@ -52,7 +54,7 @@ Android Studio是定制化的IntellJ。但它并不适用于编写独立Gradle�
 
 在下一屏中你很可能也不需要做任何更改。除非你想改变工程路径。完成之后，点击*Finish*。
 
-# 2 旅途开始
+## 2 旅途开始
 
 IntelliJ创建工程完成后，你会注意到工程中完全缺乏source目录。在工程树的顶部右击，选择*New*，然后*Directory*。
 
@@ -72,7 +74,7 @@ IntelliJ创建工程完成后，你会注意到工程中完全缺乏source目录
 
 随后你会发现`Project`类是未定义的。自动import在这里也是不行的。
 
-# 3 编译配置
+## 3 编译配置
 
 我们一定缺了什么。为什么无法import `Project`呢？据Gradle的文档所说，我们把：
 
@@ -105,7 +107,7 @@ Gradle窗口打开之后，点击左上角的刷新按钮。
 
 导入*Project*和*Plugin*两个类之后你就可以看到类定义这一行下面红色的波浪线了。我们需要实现一个抽象方法。
 
-# 4 apply插件自身
+## 4 apply插件自身
 
 缺失的方法是`apply()`。使用IntelliJ的intention快捷键（CTRL + Return，ALT + Return，取决于你的操作系统和快捷键配置）自动添加方法。
 
@@ -156,7 +158,7 @@ Gradle窗口打开之后，点击左上角的刷新按钮。
 
 接下来我们如何使用这个插件呢？这又是一件让人沮丧的事。我尝试了很多种方法去生成一个Jar文件来放到目标工程内，但是都失败了。而我并不想将这个刚刚写出来的插件发布到Maven Central或者JCenter上去。
 
-# 5 使用repo
+## 5 使用repo
 
 你可以在本地文件系统创建类似maven的repo。Yay！
 
@@ -190,7 +192,7 @@ Gradle窗口打开之后，点击左上角的刷新按钮。
 
 为了避免把事情搞复杂，在`build.gradle`文件里把版本号后面的"-SNAPSHOT"去掉，删除repo目录下的文件，然后重新执行`uploadArchives`。
 
-# 6 搜索你的插件
+## 6 搜索你的插件
 
 我们需要另一个文件来告诉Gradle我们的插件在哪个类里面。回到我们的工程结构，右击"main"，并创建目录`resources/META-INF/gradle-plugins`。
 
@@ -204,7 +206,7 @@ Gradle窗口打开之后，点击左上角的刷新按钮。
 
     implementation-class=com.afterecho.gradle.BlogPlugin
 
-# 7 发布
+## 7 发布
 
 再次运行`uploadArchives`任务。现在我们可以暂时离开IntelliJ，去到Android Studio的环境下了。
 
@@ -260,7 +262,7 @@ PluginId可以和GroupId以及ArtifactId完全无关，但是一般来说不应�
 
 Android Studio这个时候应当会要求Sync了。执行它。但是这时候结果有点让人扫兴：并没有特别的现象发生。
 
-# 8 最终步骤
+## 8 最终步骤
 
 没有现象的原因是虽然我们创建了一个task，但是并没有调用它。你可以从Android Studio里的Gradle工具窗口执行它。
 
