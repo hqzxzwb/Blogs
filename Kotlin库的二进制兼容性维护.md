@@ -110,10 +110,11 @@ public static final void bar(@NotNull String p1, int p2) {
 
 ### 在末尾添加一个带有默认值的参数
 
-```Kotlin
-@JvmOverloads
-fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
-}
+```diff
+ @JvmOverloads
+-fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
++fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
+ }
 ```
 
 这个变动是源代码兼容的。新增的参数带有默认值，只要将调用者代码重新编译一次，原本的调用代码将会自动地使用这个默认值。但是它并不是二进制兼容的。其二进制等同Java代码如下：
