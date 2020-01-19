@@ -843,7 +843,7 @@ data class Foo(
  
 ```
 
-在这里，拷贝函数`copy`和`copy$default`的二进制兼容性被破坏了。
+在这里，除了明显的构造函数签名变更，拷贝函数`copy`和`copy$default`的二进制兼容性也被破坏了。
 
 我们试试手动将原来的copy函数添加回来：
 
@@ -856,6 +856,8 @@ data class Foo(
 +    val i1: Int,
 +    val i2: Int
 +) {
++    constructor(s1: String, s2: String, i1: Int) : this(s1, s2, i1, 0)
++
 +    fun copy(s1: String = this.s1, s2: String = this.s2, i1: Int = this.i1): Foo {
 +        return copy(s1 = s1, s2 = s2, i1 = i1, i2 = this.i2)
 +    }
@@ -886,12 +888,12 @@ data class Foo(
     public final int getI1() {
        return this.i1;
     }
- 
--   public Foo(@NotNull String s1, @NotNull String s2, int i1) {
+
 +   public final int getI2() {
 +      return this.i2;
 +   }
 +
+-   public Foo(@NotNull String s1, @NotNull String s2, int i1) {
 +   public Foo(@NotNull String s1, @NotNull String s2, int i1, int i2) {
        Intrinsics.checkParameterIsNotNull(s1, "s1");
        Intrinsics.checkParameterIsNotNull(s2, "s2");
@@ -900,6 +902,12 @@ data class Foo(
        this.s2 = s2;
        this.i1 = i1;
 +      this.i2 = i2;
++   }
++
++   public Foo(@NotNull String s1, @NotNull String s2, int i1) {
++      Intrinsics.checkParameterIsNotNull(s1, "s1");
++      Intrinsics.checkParameterIsNotNull(s2, "s2");
++      this(s1, s2, i1, 0);
     }
  
     @NotNull
