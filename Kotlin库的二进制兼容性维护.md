@@ -16,36 +16,18 @@ fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"
 
 ```Java
 @JvmOverloads
-public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4) {
-    Intrinsics.checkParameterIsNotNull(p1, "p1");
-    Intrinsics.checkParameterIsNotNull(p3, "p3");
-    Intrinsics.checkParameterIsNotNull(p4, "p4");
-}
+public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4)
 
 // $FF: synthetic method
-public static void bar$default(String var0, int var1, String var2, List var3, int var4, Object var5) {
-    if ((var4 & 4) != 0) {
-        var2 = "123";
-    }
-
-    if ((var4 & 8) != 0) {
-        var3 = CollectionsKt.listOf("abc");
-    }
-
-    bar(var0, var1, var2, var3);
-}
+public static void bar$default(String var0, int var1, String var2, List var3, int var4, Object var5)
 
 // 只针对JvmOverloads生成
 @JvmOverloads
-public static final void bar(@NotNull String p1, int p2, @NotNull String p3) {
-    bar$default(p1, p2, p3, (List)null, 8, (Object)null);
-}
+public static final void bar(@NotNull String p1, int p2, @NotNull String p3)
 
 // 只针对JvmOverloads生成
 @JvmOverloads
-public static final void bar(@NotNull String p1, int p2) {
-    bar$default(p1, p2, (String)null, (List)null, 12, (Object)null);
-}
+public static final void bar(@NotNull String p1, int p2)
 ```
 
 当一份Kotlin调用代码只给出一部分参数、另一部分参数隐式地使用默认值时，隐藏的函数`bar$default`就会被使用。
@@ -53,60 +35,6 @@ public static final void bar(@NotNull String p1, int p2) {
 当一份Java调用代码只给出一部分参数时，根据`@JvmOverloads`生成的、重载的两个`bar`函数就会被使用。
 
 接下来，我们尝试着对这份代码作出变动。
-
-### 为一个参数添加默认值
-
-```diff
-  @JvmOverloads
-- fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
-+ fun bar(p1: String, p2: Int = 1, p3: String = "123", p4: List<String> = listOf("abc")) {
-}
-```
-
-其二进制等同的Java代码如下：
-
-```diff
-   @JvmOverloads
-   public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4) {
-      Intrinsics.checkParameterIsNotNull(p1, "p1");
-      Intrinsics.checkParameterIsNotNull(p3, "p3");
-      Intrinsics.checkParameterIsNotNull(p4, "p4");
-   }
-
-   // $FF: synthetic method
-   public static void bar$default(String var0, int var1, String var2, List var3, int var4, Object var5) {
-      if ((var4 & 2) != 0) {
-         var1 = 1;
-      }
-
-      if ((var4 & 4) != 0) {
-         var2 = "123";
-      }
-
-+     if ((var4 & 8) != 0) {
-+        var3 = CollectionsKt.listOf("abc");
-+     }
-
-      bar(var0, var1, var2, var3);
-   }
-
-+  @JvmOverloads
-+  public static final void bar(@NotNull String p1, int p2, @NotNull String p3) {
-+     bar$default(p1, p2, p3, (List)null, 8, (Object)null);
-+  }
-
-   @JvmOverloads
-   public static final void bar(@NotNull String p1, int p2) {
-      bar$default(p1, p2, (String)null, (List)null, 12, (Object)null);
-   }
-
-   @JvmOverloads
-   public static final void bar(@NotNull String p1) {
-      bar$default(p1, 0, (String)null, (List)null, 14, (Object)null);
-   }
-```
-
-这个变更显然是完全二进制兼容的。如果我们不使用`@JvmOverloads`，这个变动仍将是二进制兼容的。
 
 ### 在末尾添加一个带有默认值的参数
 
@@ -120,46 +48,22 @@ public static final void bar(@NotNull String p1, int p2) {
 这个变动是源代码兼容的。新增的参数带有默认值，只要将调用者代码重新编译一次，原本的调用代码将会自动地使用这个默认值。但是它并不是二进制兼容的。其二进制等同Java代码如下：
 
 ```diff
-@JvmOverloads
-- public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4) {
-+ public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4, @Nullable Object p5) {
-    Intrinsics.checkParameterIsNotNull(p1, "p1");
-    Intrinsics.checkParameterIsNotNull(p3, "p3");
-    Intrinsics.checkParameterIsNotNull(p4, "p4");
-}
+ @JvmOverloads
+-public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4)
++public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4, @Nullable Object p5)
 
-// $FF: synthetic method
-- public static void bar$default(String var0, int var1, String var2, List var3, int var4, Object var5) {
-+ public static void bar$default(String var0, int var1, String var2, List var3, Object var4, int var5, Object var6) {
-    if ((var5 & 4) != 0) {
-        var2 = "123";
-    }
+ // $FF: synthetic method
+-public static void bar$default(String var0, int var1, String var2, List var3, int var4, Object var5)
++public static void bar$default(String var0, int var1, String var2, List var3, Object var4, int var5, Object var6)
 
-    if ((var5 & 8) != 0) {
-        var3 = CollectionsKt.listOf("abc");
-    }
++@JvmOverloads
++public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull + List p4)
 
-+    if ((var5 & 16) != 0) {
-+        var4 = null;
-+    }
+ @JvmOverloads
+ public static final void bar(@NotNull String p1, int p2, @NotNull String p3)
 
-    bar(var0, var1, var2, var3, var4);
-}
-
-+ @JvmOverloads
-+ public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull + List p4) {
-+    bar$default(p1, p2, p3, p4, (Object)null, 16, (Object)null);
-+ }
-
-@JvmOverloads
-public static final void bar(@NotNull String p1, int p2, @NotNull String p3) {
-    bar$default(p1, p2, p3, (List)null, (Object)null, 24, (Object)null);
-}
-
-@JvmOverloads
-public static final void bar(@NotNull String p1, int p2) {
-    bar$default(p1, p2, (String)null, (List)null, (Object)null, 28, (Object)null);
-}
+ @JvmOverloads
+ public static final void bar(@NotNull String p1, int p2)
 ```
 
 可以看到，原本使用了`bar$default`的代码此时就会发生`NoSuchMethodError`。原本使用了`bar`函数本体的代码，仍然可以照常运行，因为`@JvmOverloads`生成了一个与其签名相同的函数。
@@ -169,14 +73,14 @@ public static final void bar(@NotNull String p1, int p2) {
 我们尝试保留原有的函数来维护二进制兼容性：
 
 ```diff
-@JvmOverloads
-fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
+ @JvmOverloads
+ fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
 +   bar(p1, p2, p3, p4, null)
-}
+ }
 +
-+ @JvmOverloads
-+ fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
-+ }
++@JvmOverloads
++fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
++}
 ```
 
 这回得到一个编译错误：
@@ -198,71 +102,34 @@ Platform declaration clash: The following declarations have the same JVM signatu
 我们试试不给新增的函数添加`@JvmOverloads`：
 
 ```diff
-  @JvmOverloads
-  fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
-+   bar(p1, p2, p3, p4, null)
+ @JvmOverloads
+ fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
++    bar(p1, p2, p3, p4, null)
   }
 +
-+ fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
-+ }
++fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
++}
 ```
 
 编译错误解决了，其等同的Java代码如下：
 
 ```diff
-   @JvmOverloads
-   public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4) {
-      Intrinsics.checkParameterIsNotNull(p1, "p1");
-      Intrinsics.checkParameterIsNotNull(p3, "p3");
-      Intrinsics.checkParameterIsNotNull(p4, "p4");
-+     bar(p1, p2, p3, p4, (Object)null);
-   }
+ @JvmOverloads
+ public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4)
 
-   // $FF: synthetic method
-   public static void bar$default(String var0, int var1, String var2, List var3, int var4, Object var5) {
-      if ((var4 & 4) != 0) {
-         var2 = "123";
-      }
+ // $FF: synthetic method
+ public static void bar$default(String var0, int var1, String var2, List var3, int var4, Object var5)
 
-      if ((var4 & 8) != 0) {
-         var3 = CollectionsKt.listOf("abc");
-      }
+ @JvmOverloads
+ public static final void bar(@NotNull String p1, int p2, @NotNull String p3)
 
-      bar(var0, var1, var2, var3);
-   }
+ @JvmOverloads
+ public static final void bar(@NotNull String p1, int p2)
 
-   @JvmOverloads
-   public static final void bar(@NotNull String p1, int p2, @NotNull String p3) {
-      bar$default(p1, p2, p3, (List)null, 8, (Object)null);
-   }
-
-   @JvmOverloads
-   public static final void bar(@NotNull String p1, int p2) {
-      bar$default(p1, p2, (String)null, (List)null, 12, (Object)null);
-   }
-
-+  public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4, @Nullable Object p5) {
-+     Intrinsics.checkParameterIsNotNull(p1, "p1");
-+     Intrinsics.checkParameterIsNotNull(p3, "p3");
-+     Intrinsics.checkParameterIsNotNull(p4, "p4");
-+  }
++public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4, @Nullable Object p5)
 +
-+  // $FF: synthetic method
-+  public static void bar$default(String var0, int var1, String var2, List var3, Object var4, int var5, Object var6) {
-+     if ((var5 & 4) != 0) {
-+        var2 = "123";
-+     }
-+
-+     if ((var5 & 8) != 0) {
-+        var3 = CollectionsKt.listOf("abc");
-+     }
-+
-+     if ((var5 & 16) != 0) {
-+        var4 = null;
-+     }
-+
-+     bar(var0, var1, var2, var3, var4);
-+  }
++// $FF: synthetic method
++public static void bar$default(String var0, int var1, String var2, List var3, Object var4, int var5, Object var6)
 ```
 
 这应该可以完美地维持二进制兼容性。
@@ -274,18 +141,18 @@ Platform declaration clash: The following declarations have the same JVM signatu
 可以尝试下面的实践：
 
 ```diff
-  @JvmOverloads
-- fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
-+ fun bar(p1: String, p2: Int, p3: String = barP3DefaultValue(), p4: List<String> = barP4DefaultValue()) {
-+   bar(p1, p2, p3, p4, barP5DefaultValue())
-  }
+ @JvmOverloads
+-fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
++fun bar(p1: String, p2: Int, p3: String = barP3DefaultValue(), p4: List<String> = barP4DefaultValue()) {
++  bar(p1, p2, p3, p4, barP5DefaultValue())
+ }
 +
-+ fun bar(p1: String, p2: Int, p3: String = barP3DefaultValue(), p4: List<String> = barP4DefaultValue(), p5: Any? = barP5DefaultValue()) {
-+ }
++fun bar(p1: String, p2: Int, p3: String = barP3DefaultValue(), p4: List<String> = barP4DefaultValue(), p5: Any? = barP5DefaultValue()) {
++}
 +
-+ private fun barP3DefaultValue() = "123"
-+ private fun barP4DefaultValue() = listOf("abc")
-+ private fun barP5DefaultValue() = null
++private fun barP3DefaultValue() = "123"
++private fun barP4DefaultValue() = listOf("abc")
++private fun barP5DefaultValue() = null
 ```
 
 这样就可以通过修改几个提供默认值的函数的实现来统一变更默认值。但是显而易见，这份代码麻烦了许多。开发者可能需要根据实际情况对此进行取舍。
@@ -303,35 +170,16 @@ class Foo @JvmOverloads constructor(p1: String, p2: Int, p3: String = "123", p4:
 ```Java
 public final class Foo {
    @JvmOverloads
-   public Foo(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4) {
-      Intrinsics.checkParameterIsNotNull(p1, "p1");
-      Intrinsics.checkParameterIsNotNull(p3, "p3");
-      Intrinsics.checkParameterIsNotNull(p4, "p4");
-      super();
-   }
+   public Foo(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4)
 
    // $FF: synthetic method
-   public Foo(String var1, int var2, String var3, List var4, int var5, DefaultConstructorMarker var6) {
-      if ((var5 & 4) != 0) {
-         var3 = "123";
-      }
-
-      if ((var5 & 8) != 0) {
-         var4 = CollectionsKt.listOf("abc");
-      }
-
-      this(var1, var2, var3, var4);
-   }
+   public Foo(String var1, int var2, String var3, List var4, int var5, DefaultConstructorMarker var6)
 
    @JvmOverloads
-   public Foo(@NotNull String p1, int p2, @NotNull String p3) {
-      this(p1, p2, p3, (List)null, 8, (DefaultConstructorMarker)null);
-   }
+   public Foo(@NotNull String p1, int p2, @NotNull String p3)
 
    @JvmOverloads
-   public Foo(@NotNull String p1, int p2) {
-      this(p1, p2, (String)null, (List)null, 12, (DefaultConstructorMarker)null);
-   }
+   public Foo(@NotNull String p1, int p2)
 }
 ```
 
@@ -340,71 +188,33 @@ public final class Foo {
 那么我们仿照带参数默认值函数的解决方案，为构造器添加一个参数：
 
 ```diff
-- class Foo @JvmOverloads constructor(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"))
-+ class Foo constructor(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
-+     @JvmOverloads
-+     constructor(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) : this(p1, p2, p3, p4, null)
-+ }
+-class Foo @JvmOverloads constructor(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"))
++class Foo constructor(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
++    @JvmOverloads
++    constructor(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) : this(p1, p2, p3, p4, null)
++}
 ```
 
 等同的Java代码如下：
 
 ```diff
-public final class Foo {
-+   public Foo(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4, @Nullable Object p5) {
-+      Intrinsics.checkParameterIsNotNull(p1, "p1");
-+      Intrinsics.checkParameterIsNotNull(p3, "p3");
-+      Intrinsics.checkParameterIsNotNull(p4, "p4");
-+      super();
-+   }
+ public final class Foo {
++   public Foo(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4, @Nullable Object p5)
 +
 +   // $FF: synthetic method
-+   public Foo(String var1, int var2, String var3, List var4, Object var5, int var6, DefaultConstructorMarker var7) {
-+      if ((var6 & 4) != 0) {
-+         var3 = "123";
-+      }
-+
-+      if ((var6 & 8) != 0) {
-+         var4 = CollectionsKt.listOf("abc");
-+      }
-+
-+      if ((var6 & 16) != 0) {
-+         var5 = null;
-+      }
-+
-+      this(var1, var2, var3, var4, var5);
-+   }
++   public Foo(String var1, int var2, String var3, List var4, Object var5, int var6, DefaultConstructorMarker var7)
 
    @JvmOverloads
-   public Foo(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4) {
-      Intrinsics.checkParameterIsNotNull(p1, "p1");
-      Intrinsics.checkParameterIsNotNull(p3, "p3");
-      Intrinsics.checkParameterIsNotNull(p4, "p4");
-      this(p1, p2, p3, p4, (Object)null);
-   }
+   public Foo(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4)
 
    // $FF: synthetic method
-   public Foo(String var1, int var2, String var3, List var4, int var5, DefaultConstructorMarker var6) {
-      if ((var5 & 4) != 0) {
-         var3 = "123";
-      }
-
-      if ((var5 & 8) != 0) {
-         var4 = CollectionsKt.listOf("abc");
-      }
-
-      this(var1, var2, var3, var4);
-   }
+   public Foo(String var1, int var2, String var3, List var4, int var5, DefaultConstructorMarker var6)
 
    @JvmOverloads
-   public Foo(@NotNull String p1, int p2, @NotNull String p3) {
-      this(p1, p2, p3, (List)null, 8, (DefaultConstructorMarker)null);
-   }
+   public Foo(@NotNull String p1, int p2, @NotNull String p3)
 
    @JvmOverloads
-   public Foo(@NotNull String p1, int p2) {
-      this(p1, p2, (String)null, (List)null, 12, (DefaultConstructorMarker)null);
-   }
+   public Foo(@NotNull String p1, int p2)
 }
 ```
 
@@ -429,98 +239,35 @@ data class Foo(
 ```Java
 public final class Foo {
    @NotNull
-   private final String s1;
-   @NotNull
-   private final String s2;
-   private final int i1;
+   public final String getS1()
 
    @NotNull
-   public final String getS1() {
-      return this.s1;
-   }
+   public final String getS2()
+
+   public final int getI1()
+
+   public Foo(@NotNull String s1, @NotNull String s2, int i1)
 
    @NotNull
-   public final String getS2() {
-      return this.s2;
-   }
-
-   public final int getI1() {
-      return this.i1;
-   }
-
-   public Foo(@NotNull String s1, @NotNull String s2, int i1) {
-      Intrinsics.checkParameterIsNotNull(s1, "s1");
-      Intrinsics.checkParameterIsNotNull(s2, "s2");
-      super();
-      this.s1 = s1;
-      this.s2 = s2;
-      this.i1 = i1;
-   }
+   public final String component1()
 
    @NotNull
-   public final String component1() {
-      return this.s1;
-   }
+   public final String component2()
+
+   public final int component3()
 
    @NotNull
-   public final String component2() {
-      return this.s2;
-   }
-
-   public final int component3() {
-      return this.i1;
-   }
-
-   @NotNull
-   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1) {
-      Intrinsics.checkParameterIsNotNull(s1, "s1");
-      Intrinsics.checkParameterIsNotNull(s2, "s2");
-      return new Foo(s1, s2, i1);
-   }
+   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1)
 
    // $FF: synthetic method
-   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, Object var5) {
-      if ((var4 & 1) != 0) {
-         var1 = var0.s1;
-      }
-
-      if ((var4 & 2) != 0) {
-         var2 = var0.s2;
-      }
-
-      if ((var4 & 4) != 0) {
-         var3 = var0.i1;
-      }
-
-      return var0.copy(var1, var2, var3);
-   }
+   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, Object var5)
 
    @NotNull
-   public String toString() {
-      return "Foo(s1=" + this.s1 + ", s2=" + this.s2 + ", i1=" + this.i1 + ")";
-   }
+   public String toString()
 
-   public int hashCode() {
-      String var10000 = this.s1;
-      int var1 = (var10000 != null ? var10000.hashCode() : 0) * 31;
-      String var10001 = this.s2;
-      return (var1 + (var10001 != null ? var10001.hashCode() : 0)) * 31 + this.i1;
-   }
+   public int hashCode()
 
-   public boolean equals(@Nullable Object var1) {
-      if (this != var1) {
-         if (var1 instanceof Foo) {
-            Foo var2 = (Foo)var1;
-            if (Intrinsics.areEqual(this.s1, var2.s1) && Intrinsics.areEqual(this.s2, var2.s2) && this.i1 == var2.i1) {
-               return true;
-            }
-         }
-
-         return false;
-      } else {
-         return true;
-      }
-   }
+   public boolean equals(@Nullable Object var1)
 }
 ```
 
@@ -575,129 +322,48 @@ public static final void testFoo() {
 其等效的Java代码发生相应的变化：
 
 ```diff
-p public final class Foo {
+ public final class Foo {
 -   @NotNull
--   private final String s1;
-+   private final int i1;
-    @NotNull
-    private final String s2;
--   private final int i1;
--
-    @NotNull
--   public final String getS1() {
--      return this.s1;
-+   private final String s1;
-+
-+   public final int getI1() {
-+      return this.i1;
-    }
+-   public final String getS1()
++   public final int getI1()
  
     @NotNull
     public final String getS2() {
        return this.s2;
     }
  
--   public final int getI1() {
--      return this.i1;
+-   public final int getI1()
 +   @NotNull
-+   public final String getS1() {
-+      return this.s1;
-    }
++   public final String getS1()
  
--   public Foo(@NotNull String s1, @NotNull String s2, int i1) {
--      Intrinsics.checkParameterIsNotNull(s1, "s1");
-+   public Foo(int i1, @NotNull String s2, @NotNull String s1) {
-       Intrinsics.checkParameterIsNotNull(s2, "s2");
-+      Intrinsics.checkParameterIsNotNull(s1, "s1");
-       super();
--      this.s1 = s1;
--      this.s2 = s2;
-       this.i1 = i1;
-+      this.s2 = s2;
-+      this.s1 = s1;
-    }
+-   public Foo(@NotNull String s1, @NotNull String s2, int i1)
++   public Foo(int i1, @NotNull String s2, @NotNull String s1)
  
 -   @NotNull
--   public final String component1() {
--      return this.s1;
-+   public final int component1() {
-+      return this.i1;
-    }
+-   public final String component1()
++   public final int component1()
  
     @NotNull
-    public final String component2() {
-       return this.s2;
-    }
+    public final String component2()
  
--   public final int component3() {
--      return this.i1;
+-   public final int component3()
 +   @NotNull
-+   public final String component3() {
-+      return this.s1;
-    }
++   public final String component3()
  
     @NotNull
--   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1) {
--      Intrinsics.checkParameterIsNotNull(s1, "s1");
-+   public final Foo copy(int i1, @NotNull String s2, @NotNull String s1) {
-       Intrinsics.checkParameterIsNotNull(s2, "s2");
--      return new Foo(s1, s2, i1);
-+      Intrinsics.checkParameterIsNotNull(s1, "s1");
-+      return new Foo(i1, s2, s1);
-    }
+-   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1)
++   public final Foo copy(int i1, @NotNull String s2, @NotNull String s1)
  
     // $FF: synthetic method
--   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, Object var5) {
-+   public static Foo copy$default(Foo var0, int var1, String var2, String var3, int var4, Object var5) {
-       if ((var4 & 1) != 0) {
--         var1 = var0.s1;
-+         var1 = var0.i1;
-       }
- 
-       if ((var4 & 2) != 0) {
-          var2 = var0.s2;
-       }
- 
-       if ((var4 & 4) != 0) {
--         var3 = var0.i1;
-+         var3 = var0.s1;
-       }
- 
-       return var0.copy(var1, var2, var3);
-    }
+-   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, Object var5)
++   public static Foo copy$default(Foo var0, int var1, String var2, String var3, int var4, Object var5)
  
     @NotNull
-    public String toString() {
--      return "Foo(s1=" + this.s1 + ", s2=" + this.s2 + ", i1=" + this.i1 + ")";
-+      return "Foo(i1=" + this.i1 + ", s2=" + this.s2 + ", s1=" + this.s1 + ")";
-    }
+    public String toString()
  
-    public int hashCode() {
--      String var10000 = this.s1;
--      int var1 = (var10000 != null ? var10000.hashCode() : 0) * 31;
-+      int var10000 = this.i1 * 31;
-       String var10001 = this.s2;
--      return (var1 + (var10001 != null ? var10001.hashCode() : 0)) * 31 + this.i1;
-+      var10000 = (var10000 + (var10001 != null ? var10001.hashCode() : 0)) * 31;
-+      var10001 = this.s1;
-+      return var10000 + (var10001 != null ? var10001.hashCode() : 0);
-    }
+    public int hashCode()
  
-    public boolean equals(@Nullable Object var1) {
-       if (this != var1) {
-          if (var1 instanceof Foo) {
-             Foo var2 = (Foo)var1;
--            if (Intrinsics.areEqual(this.s1, var2.s1) && Intrinsics.areEqual(this.s2, var2.s2) && this.i1 == var2.i1) {
-+            if (this.i1 == var2.i1 && Intrinsics.areEqual(this.s2, var2.s2) && Intrinsics.areEqual(this.s1, var2.s1)) {
-                return true;
-             }
-          }
- 
-          return false;
-       } else {
-          return true;
-       }
-    }
+    public boolean equals(@Nullable Object var1)
  }
 ```
 
@@ -723,123 +389,42 @@ data class Foo(
 ```diff
  public final class Foo {
     @NotNull
-    private final String s1;
-    @NotNull
-    private final String s2;
-    private final int i1;
-+   private final int i2;
+    public final String getS1()
  
     @NotNull
-    public final String getS1() {
-       return this.s1;
-    }
+    public final String getS2()
  
-    @NotNull
-    public final String getS2() {
-       return this.s2;
-    }
- 
-    public final int getI1() {
-       return this.i1;
-    }
+    public final int getI1()
 
-+   public final int getI2() {
-+      return this.i2;
-+   }
++   public final int getI2()
 +
--   public Foo(@NotNull String s1, @NotNull String s2, int i1) {
-+   public Foo(@NotNull String s1, @NotNull String s2, int i1, int i2) {
-       Intrinsics.checkParameterIsNotNull(s1, "s1");
-       Intrinsics.checkParameterIsNotNull(s2, "s2");
-       super();
-       this.s1 = s1;
-       this.s2 = s2;
-       this.i1 = i1;
-+      this.i2 = i2;
-    }
+-   public Foo(@NotNull String s1, @NotNull String s2, int i1)
++   public Foo(@NotNull String s1, @NotNull String s2, int i1, int i2)
  
     @NotNull
-    public final String component1() {
-       return this.s1;
-    }
+    public final String component1()
  
     @NotNull
-    public final String component2() {
-       return this.s2;
-    }
+    public final String component2()
  
-    public final int component3() {
-       return this.i1;
-    }
+    public final int component3()
  
-+   public final int component4() {
-+      return this.i2;
-+   }
++   public final int component4()
 +
     @NotNull
--   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1) {
-+   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1, int i2) {
-       Intrinsics.checkParameterIsNotNull(s1, "s1");
-       Intrinsics.checkParameterIsNotNull(s2, "s2");
--      return new Foo(s1, s2, i1);
-+      return new Foo(s1, s2, i1, i2);
-    }
+-   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1)
++   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1, int i2)
  
     // $FF: synthetic method
--   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, Object var5) {
--      if ((var4 & 1) != 0) {
-+   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, int var5, Object var6) {
-+      if ((var5 & 1) != 0) {
-          var1 = var0.s1;
-       }
- 
--      if ((var4 & 2) != 0) {
-+      if ((var5 & 2) != 0) {
-          var2 = var0.s2;
-       }
- 
--      if ((var4 & 4) != 0) {
-+      if ((var5 & 4) != 0) {
-          var3 = var0.i1;
-       }
- 
--      return var0.copy(var1, var2, var3);
-+      if ((var5 & 8) != 0) {
-+         var4 = var0.i2;
-+      }
-+
-+      return var0.copy(var1, var2, var3, var4);
-    }
+-   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, Object var5)
++   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, int var5, Object var6)
  
     @NotNull
-    public String toString() {
--      return "Foo(s1=" + this.s1 + ", s2=" + this.s2 + ", i1=" + this.i1 + ")";
-+      return "Foo(s1=" + this.s1 + ", s2=" + this.s2 + ", i1=" + this.i1 + ", i2=" + this.i2 + ")";
-    }
+    public String toString()
  
-    public int hashCode() {
-       String var10000 = this.s1;
-       int var1 = (var10000 != null ? var10000.hashCode() : 0) * 31;
-       String var10001 = this.s2;
--      return (var1 + (var10001 != null ? var10001.hashCode() : 0)) * 31 + this.i1;
-+      return ((var1 + (var10001 != null ? var10001.hashCode() : 0)) * 31 + this.i1) * 31 + this.i2;
-    }
+    public int hashCode()
  
-    public boolean equals(@Nullable Object var1) {
-       if (this != var1) {
-          if (var1 instanceof Foo) {
-             Foo var2 = (Foo)var1;
--            if (Intrinsics.areEqual(this.s1, var2.s1) && Intrinsics.areEqual(this.s2, var2.s2) && this.i1 == var2.i1) {
-+            if (Intrinsics.areEqual(this.s1, var2.s1) && Intrinsics.areEqual(this.s2, var2.s2) && this.i1 == var2.i1 && this.i2 == var2.i2) {
-                return true;
-             }
-          }
- 
-          return false;
-       } else {
-          return true;
-       }
-    }
+    public boolean equals(@Nullable Object var1)
  }
  
 ```
@@ -859,6 +444,7 @@ data class Foo(
 +) {
 +    constructor(s1: String, s2: String, i1: Int) : this(s1, s2, i1, 0)
 +
++    @Deprecated("", level = HIDDEN) // For binary compatibility.
 +    fun copy(s1: String = this.s1, s2: String = this.s2, i1: Int = this.i1): Foo {
 +        return copy(s1 = s1, s2 = s2, i1 = i1, i2 = this.i2)
 +    }
@@ -868,155 +454,52 @@ data class Foo(
 再对比一下对应Java代码的变化：
 
 ```diff
- public final class Foo {
+ public final class Foo { 
     @NotNull
-    private final String s1;
-    @NotNull
-    private final String s2;
-    private final int i1;
-+   private final int i2;
+    public final String getS1()
  
     @NotNull
-    public final String getS1() {
-       return this.s1;
-    }
+    public final String getS2()
  
-    @NotNull
-    public final String getS2() {
-       return this.s2;
-    }
- 
-    public final int getI1() {
-       return this.i1;
-    }
+    public final int getI1()
 
-+   public final int getI2() {
-+      return this.i2;
-+   }
++   public final int getI2()
 +
--   public Foo(@NotNull String s1, @NotNull String s2, int i1) {
-+   public Foo(@NotNull String s1, @NotNull String s2, int i1, int i2) {
-       Intrinsics.checkParameterIsNotNull(s1, "s1");
-       Intrinsics.checkParameterIsNotNull(s2, "s2");
-       super();
-       this.s1 = s1;
-       this.s2 = s2;
-       this.i1 = i1;
-+      this.i2 = i2;
-+   }
+-   public Foo(@NotNull String s1, @NotNull String s2, int i1)
++   public Foo(@NotNull String s1, @NotNull String s2, int i1, int i2)
 +
-+   public Foo(@NotNull String s1, @NotNull String s2, int i1) {
-+      Intrinsics.checkParameterIsNotNull(s1, "s1");
-+      Intrinsics.checkParameterIsNotNull(s2, "s2");
-+      this(s1, s2, i1, 0);
-    }
++   public Foo(@NotNull String s1, @NotNull String s2, int i1)
+
+    @NotNull
+    public final String component1()
  
     @NotNull
-    public final String component1() {
-       return this.s1;
-    }
+    public final String component2()
  
-    @NotNull
-    public final String component2() {
-       return this.s2;
-    }
+    public final int component3()
  
-    public final int component3() {
-       return this.i1;
-    }
- 
-+   public final int component4() {
-+      return this.i2;
-+   }
++   public final int component4()
 +
     @NotNull
--   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1) {
-+   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1, int i2) {
-       Intrinsics.checkParameterIsNotNull(s1, "s1");
-       Intrinsics.checkParameterIsNotNull(s2, "s2");
--      return new Foo(s1, s2, i1);
-+      return new Foo(s1, s2, i1, i2);
-    }
+-   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1)
++   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1, int i2)
  
     // $FF: synthetic method
--   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, Object var5) {
--      if ((var4 & 1) != 0) {
-+   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, int var5, Object var6) {
-+      if ((var5 & 1) != 0) {
-          var1 = var0.s1;
-       }
- 
--      if ((var4 & 2) != 0) {
-+      if ((var5 & 2) != 0) {
-          var2 = var0.s2;
-       }
- 
--      if ((var4 & 4) != 0) {
-+      if ((var5 & 4) != 0) {
-          var3 = var0.i1;
-       }
- 
--      return var0.copy(var1, var2, var3);
-+      if ((var5 & 8) != 0) {
-+         var4 = var0.i2;
-+      }
-+
-+      return var0.copy(var1, var2, var3, var4);
-    }
+-   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, Object var5)
++   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, int var5, Object var6)
  
 +   @NotNull
-+   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1) {
-+      Intrinsics.checkParameterIsNotNull(s1, "s1");
-+      Intrinsics.checkParameterIsNotNull(s2, "s2");
-+      return this.copy(s1, s2, i1, this.i2);
-+   }
++   public final Foo copy(@NotNull String s1, @NotNull String s2, int i1)
 +
 +   // $FF: synthetic method
-+   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, Object var5) {
-+      if ((var4 & 1) != 0) {
-+         var1 = var0.s1;
-+      }
-+
-+      if ((var4 & 2) != 0) {
-+         var2 = var0.s2;
-+      }
-+
-+      if ((var4 & 4) != 0) {
-+         var3 = var0.i1;
-+      }
-+
-+      return var0.copy(var1, var2, var3);
-+   }
++   public static Foo copy$default(Foo var0, String var1, String var2, int var3, int var4, Object var5)
 
     @NotNull
-    public String toString() {
--      return "Foo(s1=" + this.s1 + ", s2=" + this.s2 + ", i1=" + this.i1 + ")";
-+      return "Foo(s1=" + this.s1 + ", s2=" + this.s2 + ", i1=" + this.i1 + ", i2=" + this.i2 + ")";
-    }
+    public String toString()
  
-    public int hashCode() {
-       String var10000 = this.s1;
-       int var1 = (var10000 != null ? var10000.hashCode() : 0) * 31;
-       String var10001 = this.s2;
--      return (var1 + (var10001 != null ? var10001.hashCode() : 0)) * 31 + this.i1;
-+      return ((var1 + (var10001 != null ? var10001.hashCode() : 0)) * 31 + this.i1) * 31 + this.i2;
-    }
+    public int hashCode()
  
-    public boolean equals(@Nullable Object var1) {
-       if (this != var1) {
-          if (var1 instanceof Foo) {
-             Foo var2 = (Foo)var1;
--            if (Intrinsics.areEqual(this.s1, var2.s1) && Intrinsics.areEqual(this.s2, var2.s2) && this.i1 == var2.i1) {
-+            if (Intrinsics.areEqual(this.s1, var2.s1) && Intrinsics.areEqual(this.s2, var2.s2) && this.i1 == var2.i1 && this.i2 == var2.i2) {
-                return true;
-             }
-          }
- 
-          return false;
-       } else {
-          return true;
-       }
-    }
+    public boolean equals(@Nullable Object var1)
  }
 ```
 
