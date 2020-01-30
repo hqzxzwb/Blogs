@@ -57,7 +57,7 @@ public static final void bar(@NotNull String p1, int p2)
 +public static void bar$default(String var0, int var1, String var2, List var3, Object var4, int var5, Object var6)
 
 +@JvmOverloads
-+public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull + List p4)
++public static final void bar(@NotNull String p1, int p2, @NotNull String p3, @NotNull List p4)
 
  @JvmOverloads
  public static final void bar(@NotNull String p1, int p2, @NotNull String p3)
@@ -105,7 +105,7 @@ Platform declaration clash: The following declarations have the same JVM signatu
  @JvmOverloads
  fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
 +    bar(p1, p2, p3, p4, null)
-  }
+ }
 +
 +fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
 +}
