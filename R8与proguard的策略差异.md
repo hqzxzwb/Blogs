@@ -2,7 +2,7 @@
 
 [R8](https://developer.android.com/studio/build/shrink-code)是谷歌推出的代码混淆/优化工具，用以代替proguard。它的混淆和优化策略与proguard有所不同，其中一些在我们由proguard向R8迁移的时候可能会带来问题，这篇文章主要关注这一类差异以及解决方案。
 
-## R8无实例假设
+## 1. R8无实例假设
 
 ### 优化策略
 如果一个类，在代码中未被显式地实例化，即没有其他代码调用了这个类的构造方法，那么R8会作出运行时不会出现该类的实例的假设。据此假设，R8会删除该类的所有非静态方法。
@@ -53,7 +53,9 @@ class Foo : JsonDeserializer<Bar>, JsonSerializer<Bar> {
 -keep,allowobfuscation class * implements com.google.gson.TypeAdapter
 ```
 
-## R8合并接口与实现类
+这几条规则已被添加到Gson的[proguard.cfg](https://github.com/google/gson/blob/master/examples/android-proguard-example/proguard.cfg)文件中。
+
+## 2. R8合并接口与实现类
 
 ### 优化策略
 若一个接口只存在一种实现，R8会假设所有该接口的实例，都是这个类的实例，并将所有的接口方法都移动到实现类当中。若接口类型没有其他引用，则会将接口类型删除。以下是一个示例：
@@ -210,7 +212,7 @@ object InterfacePool {
 
 理论上，此策略也可能应用于类之间的继承关系。即，若类A继承了类B，且类B不存在其他子类，且类B没有被实例化，那么可以假设：所有类B的对象都是类A的对象。R8实际上有没有作此优化，我目前没有进行探索。实际上，我们只要有了这个思路，遇到问题时自然可以解决之，因此我没有花更多精力探索这个优化的精确边界条件。
 
-## 方法外联
+## 3. 方法外联
 
 ### 优化策略
 
@@ -256,7 +258,7 @@ object Outline {
 
 ### 潜在问题
 
-与前两项优化策略不同，这个优化在代码逻辑层面不会带来任何问题。但是，我仍然遇到了一个与此有关的问题。这个问题与热修复密切相关。
+一般来说，这个优化在代码逻辑层面不会带来任何问题。但是，我仍然遇到了一个与此有关的问题。这个问题与热修复密切相关。
 
 这里我使用我熟悉的Tinker框架做案例分析。其他热修复框架，按照原理不同，可能会、也可能不会遇到这个问题，相信读者可以自行判断。
 
@@ -267,3 +269,32 @@ object Outline {
 ### 解决方案
 
 我们通过编译后修改apk解决了这一问题。我们先把`com.tencent.tinker.loader`下的代码不加混淆编译成dex，再反编译成smali。在生成apk之后，我们将apk进行反编译，得到smali代码。将其中`com.tencent.tinker.loader`下的代码替换成预先生成的smali，然后再回编译。这样最终生成的apk当中，`com.tencent.tinker.loader`就不可能引用`Outline`这个类了。
+
+## 4. 成员变量未写入
+
+### 优化策略
+
+当一个类某个成员变量（Field）在整个app中没有检测不到赋值代码的时候，R8会假设该成员变量的值只可能是null（或者0等原始类型的初始值），并将读取该成员变量的代码替换为null或0等初始值。
+
+### 潜在问题
+
+如果字段只被反射写入的话，该优化就会被破坏。
+
+### 解决方案
+
+当存在涉及某个成员变量的keep规则时，R8不会针对该变量作上述优化。
+
+这种场景在反射式的Json解析当中常常遇到。例如，当我们使用Gson时，很多类的成员变量只会被Gson反射赋值。
+
+在大多数情况下，我们的项目中已经对使用Gson解析的类做了完整的keep，这时不必担心上述问题。
+
+但是，如果一个类，它的每个字段均使用`@SerializedName`注解标记，而且没有任何针对它的keep规则，那么这个类虽然在proguard混淆后可以正常使用，但在R8混淆后却会发生字段值被当做null的问题。
+
+为此，Gson在[proguard.cfg](https://github.com/google/gson/blob/master/examples/android-proguard-example/proguard.cfg)中增加了以下规则：
+
+```
+# Prevent R8 from leaving Data object members always null
+-keepclassmembers,allowobfuscation class * {
+  @com.google.gson.annotations.SerializedName <fields>;
+}
+```
