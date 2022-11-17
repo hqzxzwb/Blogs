@@ -9,6 +9,7 @@ Kotlin为我们带来了很多开发上的便利。其中各类语法糖发挥�
 ```Kotlin
 @JvmOverloads
 fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
+    // Implementation
 }
 ```
 
@@ -42,6 +43,7 @@ public static final void bar(@NotNull String p1, int p2)
  @JvmOverloads
 -fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
 +fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
+     // Implementation
  }
 ```
 
@@ -75,11 +77,13 @@ public static final void bar(@NotNull String p1, int p2)
 ```diff
  @JvmOverloads
  fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
+-    // Implementation
 +   bar(p1, p2, p3, p4, null)
  }
 +
 +@JvmOverloads
 +fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
++    // Implementation
 +}
 ```
 
@@ -104,10 +108,12 @@ Platform declaration clash: The following declarations have the same JVM signatu
 ```diff
  @JvmOverloads
  fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
+-    // Implementation
 +    bar(p1, p2, p3, p4, null)
  }
 +
 +fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
++    // Implementation
 +}
 ```
 
@@ -156,6 +162,22 @@ Platform declaration clash: The following declarations have the same JVM signatu
 ```
 
 这样就可以通过修改几个提供默认值的函数的实现来统一变更默认值。但是显而易见，这份代码麻烦了许多。开发者可能需要根据实际情况对此进行取舍。
+
+若原函数没有使用`@JvmOverloads`注解，则可以采用以下方式维护二进制兼容性：
+
+```diff
++@Deprecated(message = "For binary compatibility", level = DeprecationLevel.HIDDEN)
+ fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
+-    // Implementation
++    bar(p1, p2, p3, p4, null)
+ }
++
++fun bar(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
++    // Implementation
++}
+```
+
+其中，`@Deprecated`以及`DeprecationLevel.HIDDEN`是必要的，否则调用处可能会无法选定重载函数，会发生编译错误。
 
 ## 2 带有默认参数的构造器
 
@@ -219,6 +241,16 @@ public final class Foo {
 ```
 
 可以看到，这种处理方式同样适合于带参数默认值的构造器。
+
+对于没有使用`@JvmOverloads`注解的构造器，可以如下处理：
+
+```diff
+-class Foo @JvmOverloads constructor(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) {
++class Foo constructor(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc"), p5: Any? = null) {
++    @Deprecated("For binary compatibility.", level = DeprecationLevel.HIDDEN)
++    constructor(p1: String, p2: Int, p3: String = "123", p4: List<String> = listOf("abc")) : this(p1, p2, p3, p4, null)
+ }
+```
 
 ## data class
 
